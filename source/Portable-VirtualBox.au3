@@ -648,21 +648,13 @@ EndIf
 				Local $DRV = 0
 			EndIf
 
+			Local $USB = 0
 			If IniRead ($var1, "usb", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSB", "DisplayName") <> "VirtualBox USB" Then
-					If @OSArch = "x86" Then
-						RunWait (@ScriptDir &"\data\tools\devcon_x86.exe install .\"& $arch &"\drivers\USB\device\VBoxUSB.inf ""USB\VID_80EE&PID_CAFE""", @ScriptDir, @SW_HIDE)
-					EndIf
-					If @OSArch = "x64" Then
-						RunWait (@ScriptDir &"\data\tools\devcon_x64.exe install .\"& $arch &"\drivers\USB\device\VBoxUSB.inf ""USB\VID_80EE&PID_CAFE""", @ScriptDir, @SW_HIDE)
-					EndIf
+					RunWait ("pnputil.exe /add-driver .\"& $arch &"\drivers\USB\device\VBoxUSB.inf /install", @ScriptDir, @SW_HIDE)
 					FileCopy (@ScriptDir&"\"& $arch &"\drivers\USB\device\VBoxUSB.sys", @SystemDir&"\drivers", 9)
-					Local $USB = 1
-				Else
-					Local $USB = 0
+					$USB = 1
 				EndIf
-			Else
-				Local $USB = 0
 			EndIf
 
 			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSBMon", "DisplayName") <> "VirtualBox USB Monitor Driver" Then
@@ -672,21 +664,14 @@ EndIf
 				Local $MON = 0
 			EndIf
 
+			Local $ADP = 0
 			If IniRead ($var1, "net", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxNetAdp", "DisplayName") <> "VirtualBox Host-Only Network Adapter" Then
-					If @OSArch = "x86" Then
-						RunWait (@ScriptDir &"\data\tools\devcon_x86.exe install .\"& $arch &"\drivers\network\netadp\VBoxNetAdp.inf ""sun_VBoxNetAdp""", @ScriptDir, @SW_HIDE)
-					EndIf
-					If @OSArch = "x64" Then
-						RunWait (@ScriptDir &"\data\tools\devcon_x64.exe install .\"& $arch &"\drivers\network\netadp\VBoxNetAdp.inf ""sun_VBoxNetAdp""", @ScriptDir, @SW_HIDE)
-					EndIf
+					RunWait ("pnputil.exe /add-driver .\"& $arch &"\drivers\network\netadp\VBoxNetAdp.inf /install", @ScriptDir, @SW_HIDE)
 					FileCopy (@ScriptDir&"\"& $arch &"\drivers\network\netadp\VBoxNetAdp.sys", @SystemDir&"\drivers", 9)
-					Local $ADP = 1
-				Else
-					Local $ADP = 0
+					$ADP = 1
 				EndIf
 			Else
-				Local $ADP = 0
 			EndIf
 
 			If IniRead ($var1, "net", "key", "NotFound") = 1 Then
@@ -788,12 +773,7 @@ EndIf
 
 			If $USB = 1 Then
 				RunWait ("sc stop VBoxUSB", @ScriptDir, @SW_HIDE)
-				If @OSArch = "x86" Then
-					RunWait (@ScriptDir &"\data\tools\devcon_x86.exe remove ""USB\VID_80EE&PID_CAFE""", @ScriptDir, @SW_HIDE)
-				EndIf
-				If @OSArch = "x64" Then
-					RunWait (@ScriptDir &"\data\tools\devcon_x64.exe remove ""USB\VID_80EE&PID_CAFE""", @ScriptDir, @SW_HIDE)
-				EndIf
+				RunWait ("pnputil.exe /delete-driver VBoxUSB.inf /uninstall", @ScriptDir, @SW_HIDE)
 				FileDelete (@SystemDir&"\drivers\VBoxUSB.sys")
 			EndIf
 
@@ -803,12 +783,7 @@ EndIf
 
 			If $ADP = 1 Then
 				RunWait ("sc stop VBoxNetAdp", @ScriptDir, @SW_HIDE)
-				If @OSArch = "x86" Then
-					RunWait (@ScriptDir &"\data\tools\devcon_x86.exe remove ""sun_VBoxNetAdp""", @ScriptDir, @SW_HIDE)
-				EndIf
-				If @OSArch = "x64" Then
-					RunWait (@ScriptDir &"\data\tools\devcon_x64.exe remove ""sun_VBoxNetAdp""", @ScriptDir, @SW_HIDE)
-				EndIf
+				RunWait ("pnputil /delete-driver VBoxNetAdp.inf /uninstall", @ScriptDir, @SW_HIDE)
 				FileDelete (@SystemDir&"\drivers\VBoxNetAdp.sys")
 			EndIf
 
