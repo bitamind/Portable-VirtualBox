@@ -607,25 +607,11 @@ EndIf
 				TrayTip("", IniRead ($var2 & $lng &".ini", "tray", "07", "NotFound"), 5)
 			EndIf
 
-			If @OSArch = "x86" Then
-				If NOT FileExists (@SystemDir&"\msvcp71.dll") OR NOT FileExists (@SystemDir&"\msvcr71.dll") OR NOT FileExists (@SystemDir&"\msvcrt.dll") Then
-					FileCopy (@ScriptDir&"\app32\msvcp71.dll", @SystemDir, 9)
-					FileCopy (@ScriptDir&"\app32\msvcr71.dll", @SystemDir, 9)
-					FileCopy (@ScriptDir&"\app32\msvcrt.dll", @SystemDir, 9)
-					Local $msv = 1
-				Else
-					Local $msv = 0
-				EndIf
-			EndIf
-
-			If @OSArch = "x64" Then
-				If NOT FileExists (@SystemDir&"\msvcp80.dll") OR NOT FileExists (@SystemDir&"\msvcr80.dll") Then
-					FileCopy (@ScriptDir&"\app64\msvcp80.dll", @SystemDir, 9)
-					FileCopy (@ScriptDir&"\app64\msvcr80.dll", @SystemDir, 9)
-					Local $msv = 2
-				Else
-					Local $msv = 0
-				EndIf
+			Local $msv = 0
+			If NOT FileExists (@SystemDir&"\msvcp100.dll") OR NOT FileExists (@SystemDir&"\msvcr100.dll") Then
+				FileCopy (@ScriptDir&"\"& $arch & "\msvcp100.dll", @SystemDir, 9)
+				FileCopy (@ScriptDir&"\"& $arch & "\msvcr100.dll", @SystemDir, 9)
+				$msv = 1
 			EndIf
 
 			If FileExists (@ScriptDir&"\"& $arch &"\") AND FileExists (@ScriptDir&"\vboxadditions\") Then
@@ -641,11 +627,10 @@ EndIf
 
 			SplashOff ()
 
+			Local $DRV = 0
 			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxDRV", "DisplayName") <> "VirtualBox Service" Then
-				RunWait ("cmd /c sc create VBoxDRV binpath= ""%CD%\"& $arch &"\drivers\VBoxDrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", @ScriptDir, @SW_HIDE)
-				Local $DRV = 1
-			Else
-				Local $DRV = 0
+				RunWait ("cmd /c sc create VBoxDRV binpath= """& @ScriptDir &"\"& $arch &"\drivers\vboxdrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", @ScriptDir, @SW_HIDE)
+				$DRV = 1
 			EndIf
 
 			Local $USB = 0
@@ -657,11 +642,10 @@ EndIf
 				EndIf
 			EndIf
 
+			Local $MON = 0
 			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSBMon", "DisplayName") <> "VirtualBox USB Monitor Driver" Then
-				RunWait ("cmd /c sc create VBoxUSBMon binpath= ""%CD%\"& $arch &"\drivers\USB\filter\VBoxUSBMon.sys"" type= kernel start= auto error= normal displayname= PortableVBoxUSBMon", @ScriptDir, @SW_HIDE)
-				Local $MON = 1
-			Else
-				Local $MON = 0
+				RunWait ("cmd /c sc create VBoxUSBMon binpath= """& @ScriptDir &"\"& $arch &"\drivers\USB\filter\VBoxUSBMon.sys"" type= kernel start= auto error= normal displayname= PortableVBoxUSBMon", @ScriptDir, @SW_HIDE)
+				$MON = 1
 			EndIf
 
 			Local $ADP = 0
@@ -674,6 +658,7 @@ EndIf
 			Else
 			EndIf
 
+			Local $NET = 0
 			If IniRead ($var1, "net", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxNetFlt", "DisplayName") <> "VBoxNetFlt Service" Then
 					If @OSArch = "x86" Then
@@ -687,12 +672,8 @@ EndIf
 					FileCopy (@ScriptDir&"\"& $arch &"\drivers\network\netflt\VBoxNetFltNobj.dll", @SystemDir, 9)
 					FileCopy (@ScriptDir&"\"& $arch &"\drivers\network\netflt\VBoxNetFlt.sys", @SystemDir&"\drivers", 9)
 					RunWait (@SystemDir&"\regsvr32.exe /S "& @SystemDir &"\VBoxNetFltNobj.dll", @ScriptDir, @SW_HIDE)
-					Local $NET = 1
-				Else
-					Local $NET = 0
+					$NET = 1
 				EndIf
-			Else
-				Local $NET = 0
 			EndIf
 
 			If $DRV = 1 Then
@@ -809,14 +790,8 @@ EndIf
 			EndIf
 
 			If $msv = 1 Then
-				FileDelete (@SystemDir&"\msvcp71.dll")
-				FileDelete (@SystemDir&"\msvcr71.dll")
-				FileDelete (@SystemDir&"\msvcrt.dll")
-			EndIf
-
-			If $msv = 2 Then
-				FileDelete (@SystemDir&"\msvcp80.dll")
-				FileDelete (@SystemDir&"\msvcr80.dll")
+				FileDelete (@SystemDir&"\msvcp100.dll")
+				FileDelete (@SystemDir&"\msvcr100.dll")
 			EndIf
 
 			If $DRV = 1 Then
