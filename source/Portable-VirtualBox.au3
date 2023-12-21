@@ -627,10 +627,16 @@ EndIf
 
 			SplashOff ()
 
-			Local $DRV = 0
-			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxDRV", "DisplayName") <> "VirtualBox Service" Then
-				RunWait ("cmd /c sc create VBoxDRV binpath= """& @ScriptDir &"\"& $arch &"\drivers\vboxdrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", @ScriptDir, @SW_HIDE)
-				$DRV = 1
+			Local $SUP = 0
+			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSUP", "DisplayName") <> "VirtualBox Service" Then
+				RunWait ("cmd /c sc create VBoxSUP binpath= """& @ScriptDir &"\"& $arch &"\drivers\vboxsup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", @ScriptDir, @SW_HIDE)
+				$SUP = 1
+			EndIf
+
+			Local $SDS = 0
+			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
+				RunWait ("cmd /c sc create VBoxSDS binpath= """& @ScriptDir &"\"& $arch &"\VBoxSDS.exe"" type= service start= auto error= normal displayname= PortableVBoxSDS", @ScriptDir, @SW_HIDE)
+				$SDS = 1
 			EndIf
 
 			Local $USB = 0
@@ -676,8 +682,12 @@ EndIf
 				EndIf
 			EndIf
 
-			If $DRV = 1 Then
-				RunWait ("sc start VBoxDRV", @ScriptDir, @SW_HIDE)
+			If $SUP = 1 Then
+				RunWait ("sc start VBoxSUP", @ScriptDir, @SW_HIDE)
+			EndIf
+
+			If $SDS = 1 Then
+				RunWait ("sc start VBoxSDS", @ScriptDir, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -748,8 +758,12 @@ EndIf
 			RunWait ($arch&"\VBoxSVC.exe /unregserver", @ScriptDir, @SW_HIDE)
 			RunWait (@SystemDir&"\regsvr32.exe /S /U "& $arch &"\VBoxC.dll", @ScriptDir, @SW_HIDE)
 
-			If $DRV = 1 Then
-				RunWait ("sc stop VBoxDRV", @ScriptDir, @SW_HIDE)
+			If $SUP = 1 Then
+				RunWait ("sc stop VBoxSUP", @ScriptDir, @SW_HIDE)
+			EndIf
+
+			If $SDS = 1 Then
+				RunWait ("sc stop VBoxSDS", @ScriptDir, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -794,8 +808,12 @@ EndIf
 				FileDelete (@SystemDir&"\msvcr100.dll")
 			EndIf
 
-			If $DRV = 1 Then
-				RunWait ("sc delete VBoxDRV", @ScriptDir, @SW_HIDE)
+			If $SUP = 1 Then
+				RunWait ("sc delete VBoxSUP", @ScriptDir, @SW_HIDE)
+			EndIf
+
+			If $SDS = 1 Then
+				RunWait ("sc delete VBoxSDS", @ScriptDir, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
