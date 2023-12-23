@@ -621,22 +621,16 @@ EndIf
 				FileMove (@ScriptDir&"\vboxadditions\guestadditions\*.*", @ScriptDir&"\"& $arch &"\", 9)
 			Endif
 
-			RunWait ($arch&"\VBoxSVC.exe /reregserver", @ScriptDir, @SW_HIDE)
-			RunWait (@SystemDir&"\regsvr32.exe /S "& $arch &"\VBoxC.dll", @ScriptDir, @SW_HIDE)
-			DllCall ($arch&"\VBoxRT.dll", "hwnd", "RTR3Init")
-
-			SplashOff ()
+			Local $SDS = 0
+			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
+				RunWait ("cmd /c sc create VBoxSDS binpath= """& @ScriptDir &"\"& $arch &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", @ScriptDir, @SW_HIDE)
+				$SDS = 1
+			EndIf
 
 			Local $SUP = 0
 			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSUP", "DisplayName") <> "VirtualBox Service" Then
 				RunWait ("cmd /c sc create VBoxSUP binpath= """& @ScriptDir &"\"& $arch &"\drivers\vboxsup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", @ScriptDir, @SW_HIDE)
 				$SUP = 1
-			EndIf
-
-			Local $SDS = 0
-			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
-				RunWait ("cmd /c sc create VBoxSDS binpath= """& @ScriptDir &"\"& $arch &"\VBoxSDS.exe"" type= service start= auto error= normal displayname= PortableVBoxSDS", @ScriptDir, @SW_HIDE)
-				$SDS = 1
 			EndIf
 
 			Local $USB = 0
@@ -682,12 +676,12 @@ EndIf
 				EndIf
 			EndIf
 
-			If $SUP = 1 Then
-				RunWait ("sc start VBoxSUP", @ScriptDir, @SW_HIDE)
-			EndIf
-
 			If $SDS = 1 Then
 				RunWait ("sc start VBoxSDS", @ScriptDir, @SW_HIDE)
+			EndIf
+
+			If $SUP = 1 Then
+				RunWait ("sc start VBoxSUP", @ScriptDir, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -705,6 +699,12 @@ EndIf
 			If $NET = 1 Then
 				RunWait ("sc start VBoxNetFlt", @ScriptDir, @SW_HIDE)
 			EndIf
+
+			RunWait ($arch&"\VBoxSVC.exe /reregserver", @ScriptDir, @SW_HIDE)
+			RunWait (@SystemDir&"\regsvr32.exe /S "& $arch &"\VBoxC.dll", @ScriptDir, @SW_HIDE)
+			DllCall ($arch&"\VBoxRT.dll", "hwnd", "RTR3Init")
+
+			SplashOff ()
 
 			If $CmdLine[0] = 1 Then
 				If FileExists (@ScriptDir&"\data\.VirtualBox") Then
