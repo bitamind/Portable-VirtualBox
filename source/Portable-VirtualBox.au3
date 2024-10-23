@@ -623,23 +623,29 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				FileMove ($pwd &"\vboxadditions\guestadditions\*.*", $vboxDir &"\", 9)
 			Endif
 
-			Local $SDS = 0
-			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
-				RunWait ("cmd /c sc create VBoxSDS binpath= """& $vboxDir &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", $pwd, @SW_HIDE)
-				$SDS = 1
+			Local $DRV = 0
+			If FileExists ($vboxDir & "\drivers\VBoxDrv") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxDRV", "DisplayName") <> "VirtualBox Service" Then
+				RunWait ("cmd /c sc create VBoxDRV binpath= """& $vboxDir &"\drivers\vboxdrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", $pwd, @SW_HIDE)
+				$DRV = 1
 			EndIf
 
 			Local $SUP = 0
-			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSUP", "DisplayName") <> "VirtualBox Service" Then
-				RunWait ("cmd /c sc create VBoxSUP binpath= """& $vboxDir &"\drivers\vboxsup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", $pwd, @SW_HIDE)
+			If FileExists ($vboxDir & "\drivers\vboxsup") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSUP", "DisplayName") <> "VirtualBox Service" Then
+				RunWait ("cmd /c sc create VBoxSUP binpath= """& $vboxDir &"\drivers\VBoxSup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", $pwd, @SW_HIDE)
 				$SUP = 1
+			EndIf
+
+			Local $SDS = 0
+			If FileExists ($vboxDir & "\VBoxSDS.exe") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
+				RunWait ("cmd /c sc create VBoxSDS binpath= """& $vboxDir &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", $pwd, @SW_HIDE)
+				$SDS = 1
 			EndIf
 
 			Local $USB = 0
 			If IniRead ($cfgINI, "usb", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSB", "DisplayName") <> "VirtualBox USB" Then
 					RunWait ("pnputil.exe /add-driver .\"& $arch &"\drivers\USB\device\VBoxUSB.inf /install", $pwd, @SW_HIDE)
-					FileCopy ($vboxDir &"\drivers\USB\device\VBoxUSB.sys", @SystemDir &"\drivers", 9)
+					;FileCopy ($vboxDir &"\drivers\USB\device\VBoxUSB.sys", @SystemDir &"\drivers", 9)
 					$USB = 1
 				EndIf
 			EndIf
@@ -651,10 +657,14 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			EndIf
 
 			Local $ADP = 0
+			Local $NDIS = 6
+			If NOT FileExists ($vboxDir & "\drivers\network\netadp6") OR @OSVersion = "WIN_XP" Then
+				$NDIS = ""
+			EndIf
 			If IniRead ($cfgINI, "net", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxNetAdp", "DisplayName") <> "VirtualBox Host-Only Network Adapter" Then
-					RunWait ("pnputil.exe /add-driver .\"& $arch &"\drivers\network\netadp\VBoxNetAdp.inf /install", $pwd, @SW_HIDE)
-					FileCopy ($vboxDir &"\drivers\network\netadp\VBoxNetAdp.sys", @SystemDir &"\drivers", 9)
+					RunWait ("pnputil.exe /add-driver .\"& $arch &"\drivers\network\netadp"& $NDIS &"\VBoxNetAdp"& $NDIS &".inf /install", $pwd, @SW_HIDE)
+					;FileCopy ($vboxDir &"\drivers\network\netadp"& $NDIS &"\VBoxNetAdp"& $NDIS &".sys", @SystemDir &"\drivers", 9)
 					$ADP = 1
 				EndIf
 			Else
@@ -663,27 +673,31 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			Local $NET = 0
 			If IniRead ($cfgINI, "net", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxNetFlt", "DisplayName") <> "VBoxNetFlt Service" Then
-					If @OSArch = "x86" Then
-						RunWait ($toolDir &"\snetcfg_x86.exe -v -u sun_VBoxNetFlt", $pwd, @SW_HIDE)
-						RunWait ($toolDir &"\snetcfg_x86.exe -v -l .\"& $arch &"\drivers\network\netflt\VBoxNetFlt.inf -m .\"& $arch &"\drivers\network\netflt\VBoxNetFltM.inf -c s -i sun_VBoxNetFlt", $pwd, @SW_HIDE)
+					If $NDIS = 6 Then
+						RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -u ""oracle_VBoxNetLwf""", $pwd, @SW_HIDE)
+						RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -l .\"& $arch &"\drivers\network\netlwf\VBoxNetLwf.inf -m .\"& $arch &"\drivers\network\netlwf\VBoxNetLwf.inf -c s -i ""oracle_VBoxNetLwf""", $pwd, @SW_HIDE)
+						FileCopy ($vboxDir &"\drivers\network\netlwf\VBoxNetLwf.sys", @SystemDir &"\drivers", 9)
+					Else
+						RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -u ""sun_VBoxNetFlt""", $pwd, @SW_HIDE)
+						RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -l .\"& $arch &"\drivers\network\netflt\VBoxNetFlt.inf -m .\"& $arch &"\drivers\network\netflt\VBoxNetFltM.inf -c s -i ""sun_VBoxNetFlt""", $pwd, @SW_HIDE)
+						FileCopy ($vboxDir &"\drivers\network\netflt\VBoxNetFltNobj.dll", @SystemDir, 9)
+						FileCopy ($vboxDir &"\drivers\network\netflt\VBoxNetFlt.sys", @SystemDir &"\drivers", 9)
+						RunWait (@SystemDir &"\regsvr32.exe /S "& @SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
 					EndIf
-					If @OSArch = "x64" Then
-						RunWait ($toolDir &"\snetcfg_x64.exe -v -u sun_VBoxNetFlt", $pwd, @SW_HIDE)
-						RunWait ($toolDir &"\snetcfg_x64.exe -v -l .\"& $arch &"\drivers\network\netflt\VBoxNetFlt.inf -m .\"& $arch &"\drivers\network\netflt\VBoxNetFltM.inf -c s -i sun_VBoxNetFlt", $pwd, @SW_HIDE)
-					EndIf
-					FileCopy ($vboxDir &"\drivers\network\netflt\VBoxNetFltNobj.dll", @SystemDir, 9)
-					FileCopy ($vboxDir &"\drivers\network\netflt\VBoxNetFlt.sys", @SystemDir &"\drivers", 9)
-					RunWait (@SystemDir &"\regsvr32.exe /S "& @SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
 					$NET = 1
 				EndIf
 			EndIf
 
-			If $SDS = 1 Then
-				RunWait ("sc start VBoxSDS", $pwd, @SW_HIDE)
+			If $DRV = 1 Then
+				RunWait ("sc start VBoxDRV", $pwd, @SW_HIDE)
 			EndIf
 
 			If $SUP = 1 Then
 				RunWait ("sc start VBoxSUP", $pwd, @SW_HIDE)
+			EndIf
+
+			If $SDS = 1 Then
+				RunWait ("sc start VBoxSDS", $pwd, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -700,6 +714,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 			If $NET = 1 Then
 				RunWait ("sc start VBoxNetFlt", $pwd, @SW_HIDE)
+				RunWait ("sc start VBoxNetLwf", $pwd, @SW_HIDE)
 			EndIf
 
 			RunWait ($arch &"\VBoxSVC.exe /reregserver", $pwd, @SW_HIDE)
@@ -738,9 +753,12 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				ProcessWaitClose ("VBoxManage.exe")
 			EndIf
 
+			ProcessWaitClose ("VirtualBoxVM.exe")
+
 			SplashTextOn ("Portable-VirtualBox", IniRead ($langINI, "messages", "07", "NotFound"), 220, 40, -1, -1, 1, "arial", 12)
 
 			ProcessWaitClose ("VBoxSVC.exe")
+			ProcessWaitClose ("VBoxSDS.exe")
 
 			EnvSet ("VBOX_USER_HOME")
 			Local $timer=0
@@ -758,6 +776,10 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			RunWait ($arch &"\VBoxSVC.exe /unregserver", $pwd, @SW_HIDE)
 			RunWait (@SystemDir &"\regsvr32.exe /S /U "& $arch &"\VBoxC.dll", $pwd, @SW_HIDE)
 
+			If $DRV = 1 Then
+				RunWait ("sc stop VBoxDRV", $pwd, @SW_HIDE)
+			EndIf
+
 			If $SUP = 1 Then
 				RunWait ("sc stop VBoxSUP", $pwd, @SW_HIDE)
 			EndIf
@@ -769,7 +791,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			If $USB = 1 Then
 				RunWait ("sc stop VBoxUSB", $pwd, @SW_HIDE)
 				RunWait ("pnputil.exe /delete-driver VBoxUSB.inf /uninstall", $pwd, @SW_HIDE)
-				FileDelete (@SystemDir &"\drivers\VBoxUSB.sys")
+				;FileDelete (@SystemDir &"\drivers\VBoxUSB.sys")
 			EndIf
 
 			If $MON = 1 Then
@@ -778,22 +800,24 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 			If $ADP = 1 Then
 				RunWait ("sc stop VBoxNetAdp", $pwd, @SW_HIDE)
-				RunWait ("pnputil /delete-driver VBoxNetAdp.inf /uninstall", $pwd, @SW_HIDE)
-				FileDelete (@SystemDir &"\drivers\VBoxNetAdp.sys")
+				RunWait ("pnputil /delete-driver VBoxNetAdp"& $NDIS &".inf /uninstall", $pwd, @SW_HIDE)
+				;FileDelete (@SystemDir &"\drivers\VBoxNetAdp"& $NDIS &".sys")
 			EndIf
 
 			If $NET = 1 Then
 				RunWait ("sc stop VBoxNetFlt", $pwd, @SW_HIDE)
-				If @OSArch = "x86" Then
-					RunWait ($toolDir &"\snetcfg_x86.exe -v -u sun_VBoxNetFlt", $pwd, @SW_HIDE)
+				RunWait ("sc stop VBoxNetLwf", $pwd, @SW_HIDE)
+				If $NDIS = 6 Then
+					RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -u ""sun_VBoxNetFlt""", $pwd, @SW_HIDE)
+					RunWait (@SystemDir &"\regsvr32.exe /S /U "&@SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
+					;RunWait ("sc delete VBoxNetFlt", $pwd, @SW_HIDE)
+					FileDelete (@SystemDir &"\VBoxNetFltNobj.dll")
+					FileDelete (@SystemDir &"\drivers\VBoxNetFlt.sys")
+				Else
+					RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -u ""oracle_VBoxNetLwf""", $pwd, @SW_HIDE)
+					;RunWait ("sc delete VBoxNetLwf", $pwd, @SW_HIDE)
+					FileDelete (@SystemDir &"\drivers\VBoxNetLwf.sys")
 				EndIf
-				If @OSArch = "x64" Then
-					RunWait ($toolDir &"\snetcfg_x64.exe -v -u sun_VBoxNetFlt", $pwd, @SW_HIDE)
-				EndIf
-				RunWait (@SystemDir &"\regsvr32.exe /S /U "& @SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
-				RunWait ("sc delete VBoxNetFlt", $pwd, @SW_HIDE)
-				FileDelete (@SystemDir &"\VBoxNetFltNobj.dll")
-				FileDelete (@SystemDir &"\drivers\VBoxNetFlt.sys")
 			EndIf
 
 			If FileExists ($vboxDir &"\") AND FileExists ($pwd &"\vboxadditions\") Then
@@ -806,6 +830,10 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			If $msvcrt = 1 Then
 				FileDelete (@SystemDir &"\msvcp100.dll")
 				FileDelete (@SystemDir &"\msvcr100.dll")
+			EndIf
+
+			If $DRV = 1 Then
+				RunWait ("sc delete VBoxDRV", $pwd, @SW_HIDE)
 			EndIf
 
 			If $SUP = 1 Then
@@ -830,8 +858,11 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 			If $NET = 1 Then
 				RunWait ("sc delete VBoxNetFlt", $pwd, @SW_HIDE)
+				RunWait ("sc delete VBoxNetLwf", $pwd, @SW_HIDE)
 			EndIf
 
+			ProcessClose ("VBoxSDS.exe")
+			RunWait ("sc delete VBoxSDS", $pwd, @SW_HIDE)
 			SplashOff ()
 		Else
 			WinSetState ("Oracle VM VirtualBox Manager", "", BitAND (@SW_SHOW, @SW_RESTORE))
