@@ -363,6 +363,11 @@ Else
 EndIf
 
 If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($updINI, "startvbox", "key", "NotFound") = 1) Then
+	If FileExists ($cfgDir &"\SplashScreen.jpg") Then
+		SplashImageOn ("Portable-VirtualBox", $cfgDir &"\SplashScreen.jpg", 480, 360, -1, -1, 1)
+	Else
+		SplashTextOn ("Portable-VirtualBox", IniRead ($langINI, "messages", "06", "NotFound"), 220, 40, -1, -1, 1, "arial", 12)
+	EndIf
 
 	If FileExists ($userDir &"\VirtualBox.xml-prev") Then
 		FileDelete ($userDir &"\VirtualBox.xml-prev")
@@ -560,12 +565,6 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 	If FileExists ($vboxDir & "\VirtualBox.exe") AND FileExists ($vboxDir & "\VBoxSVC.exe") AND FileExists ($vboxDir & "\VBoxC.dll") Then
 		If NOT ProcessExists ("VirtualBox.exe") OR NOT ProcessExists ("VBoxManage.exe") Then
-			If FileExists ($cfgDir &"\SplashScreen.jpg") Then
-				SplashImageOn ("Portable-VirtualBox", $cfgDir &"\SplashScreen.jpg", 480, 360, -1, -1, 1)
-			Else
-				SplashTextOn ("Portable-VirtualBox", IniRead ($langINI, "messages", "06", "NotFound"), 220, 40, -1, -1, 1, "arial", 12)
-			EndIf
-
 			If IniRead ($cfgINI, "hotkeys", "key", "NotFound") = 1 Then
 				HotKeySet (IniRead ($cfgINI, "hotkeys", "01", "NotFound") & IniRead ($cfgINI, "hotkeys", "07", "NotFound") & IniRead ($cfgINI, "hotkeys", "13", "NotFound") & IniRead ($cfgINI, "hotkeys", "19", "NotFound"), "ShowWindows_VM")
 				HotKeySet (IniRead ($cfgINI, "hotkeys", "02", "NotFound") & IniRead ($cfgINI, "hotkeys", "08", "NotFound") & IniRead ($cfgINI, "hotkeys", "14", "NotFound") & IniRead ($cfgINI, "hotkeys", "20", "NotFound"), "HideWindows_VM")
