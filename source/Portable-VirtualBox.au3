@@ -373,101 +373,185 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 	EndIf
 
 	If FileExists ($userDir &"\VirtualBox.xml") OR (FileExists ($userDir &"\Machines\") AND FileExists ($userDir &"\HardDisks\")) Then
-		Local $values0, $values1, $values2, $values3, $values4, $values5, $values6, $values7, $values8, $values9, $values10, $values11, $values12, $values13
-		Local $line, $content, $i, $j, $k, $l, $m, $n
+		Local $machines, $hdds, $dvds, $xml_global
+		Local $machine_srcs, $hdd_srcs, $dvd_srcs, $systemprops
+		Local $machine_src , $hdd_src , $dvd_src , $systemprop
+		Local $machine_path, $vdi_path, $dvd_path, $default_path, $old_machine_path, $vdi_path2
+		Local $vbox_xml, $xml_temp, $new_vbox_xml
 		Local $file = FileOpen ($userDir &"\VirtualBox.xml", 128)
 		If $file <> -1 Then
-			$line    = FileRead ($file)
-			$values0 = _StringBetween ($line, '<MachineRegistry>', '</MachineRegistry>')
-			If $values0 = 0 Then
-				$values1 = 0
-			Else
-				$values1 = _StringBetween ($values0[0], 'src="', '"')
-			EndIf
-			$values2 = _StringBetween ($line, '<HardDisks>', '</HardDisks>')
-			If $values2 = 0 Then
-				$values3 = 0
-			Else
-				$values3 = _StringBetween ($values2[0], 'location="', '"')
-			EndIf
-			$values4 = _StringBetween ($line, '<DVDImages>', '</DVDImages>')
-			If $values4 = 0 Then
-				$values5 = 0
-			Else
-				$values5 = _StringBetween ($values4[0], '<Image', '/>')
-			EndIf
-			$values10 = _StringBetween ($line, '<Global>', '</Global>')
-			If $values10 = 0 Then
-				$values11 = 0
-			Else
-				$values11 = _StringBetween ($values10[0], '<SystemProperties', '/>')
-			EndIf
-
-			For $i = 0 To UBound ($values1) - 1
-				$values6 = _StringBetween ($values1[$i], 'Machines', '.vbox')
-				If $values6 <> 0 Then
-					$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-					$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-					FileWrite ($file, StringReplace ($content, $values1[$i], "Machines" & $values6[0] & ".vbox"))
-					FileClose ($file)
-				EndIf
-			Next
-
-			For $j = 0 To UBound ($values3) - 1
-				$values7 = _StringBetween ($values3[$j], 'HardDisks', '.vdi')
-				If $values7 <> 0 Then
-					$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-					$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-					FileWrite ($file, StringReplace ($content, $values3[$j], "HardDisks" & $values7[0] & ".vdi"))
-					FileClose ($file)
-				EndIf
-			Next
-
-			For $k = 0 To UBound ($values3) - 1
-				$values8 = _StringBetween ($values3[$k], 'Machines', '.vdi')
-				If $values8 <> 0 Then
-					$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-					$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-					FileWrite ($file, StringReplace ($content, $values3[$k], "Machines" & $values8[0] & ".vdi"))
-					FileClose ($file)
-				EndIf
-			Next
-
-			For $l = 0 To UBound ($values5) - 1
-				$values9 = _StringBetween ($values5[$l], 'location="', '"')
-				If $values9 <> 0 Then
-					If NOT FileExists ($values9[0]) Then
-						$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-						$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-						FileWrite ($file, StringReplace ($content, "<Image" & $values5[$l] & "/>", ""))
-						FileClose ($file)
-					EndIf
-				EndIf
-			Next
-
-			For $m = 0 To UBound ($values11) - 1
-				$values12 = _StringBetween ($values11[$m], 'defaultMachineFolder="', '"')
-				If $values12 <> 0 Then
-					If NOT FileExists ($values10[0]) Then
-						$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-						$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-						FileWrite ($file, StringReplace ($content, $values12[0], $userDir &"\Machines"))
-						FileClose ($file)
-					EndIf
-				EndIf
-			Next
-
-			For $n = 0 To UBound ($values1) - 1
-				$values13 = _StringBetween ($values1[$n], 'Machines', '.xml')
-				If $values13 <> 0 Then
-					$content = FileRead (FileOpen ($userDir &"\VirtualBox.xml", 128))
-					$file    = FileOpen ($userDir &"\VirtualBox.xml", 2)
-					FileWrite ($file, StringReplace ($content, $values1[$n], "Machines" & $values13[0] & ".xml"))
-					FileClose ($file)
-				EndIf
-			Next
-
+			$vbox_xml = FileRead ($file)
 			FileClose ($file)
+			$new_vbox_xml = $vbox_xml
+
+			$machines = _StringBetween ($vbox_xml, '<MachineRegistry>', '</MachineRegistry>')
+			If @error Then
+				$machine_srcs = 0
+			Else
+				$machine_srcs = _StringBetween ($machines[0], 'src="', '"')
+				If @error Then
+					$machine_srcs = 0
+				Else
+
+					For $machine_src In $machine_srcs
+						$machine_path = _StringBetween ($machine_src, 'Machines', '.vbox')
+						If @error Then
+							ContinueLoop
+						Else
+							$xml_temp = StringReplace ($new_vbox_xml, $machine_src, "Machines"& $machine_path[0] &".vbox")
+							If @error Then
+								ContinueLoop
+							Else
+								If @extended = 1 Then
+									$new_vbox_xml = $xml_temp
+								Else
+									MsgBox (0, "Replace err", "Machines"& $machine_path[0] &".vbox"& " match "& @extended &" times")
+								EndIf
+							EndIf
+						EndIf
+					Next
+
+					For $machine_src In $machine_srcs
+						$old_machine_path = _StringBetween ($machine_src, 'Machines', '.xml')
+						If @error Then
+							ContinueLoop
+						Else
+							$xml_temp = StringReplace ($new_vbox_xml, $machine_src, "Machines"& $old_machine_path[0] &".xml")
+							If @error Then
+								ContinueLoop
+							Else
+								If @extended = 1 Then
+									$new_vbox_xml = $xml_temp
+								Else
+									MsgBox (0, "Replace err", "Machines"& $old_machine_path[0] &".xml"& " match "& @extended &" times")
+								EndIf
+							EndIf
+						EndIf
+					Next
+
+				EndIf
+			EndIf
+
+			$hdds = _StringBetween ($vbox_xml, '<HardDisks>', '</HardDisks>')
+			If @error Then
+				$hdd_srcs = 0
+			Else
+				$hdd_srcs = _StringBetween ($hdds[0], 'location="', '"')
+				If @error Then
+					$hdd_srcs = 0
+				Else
+
+					For $hdd_src In $hdd_srcs
+						$vdi_path = _StringBetween ($hdd_src, 'HardDisks', '.vdi')
+						If @error Then
+							ContinueLoop
+						Else
+							$xml_temp = StringReplace ($new_vbox_xml, $hdd_src, "HardDisks"& $vdi_path[0] &".vdi")
+							If @error Then
+								ContinueLoop
+							Else
+								If @extended = 1 Then
+									$new_vbox_xml = $xml_temp
+								Else
+									MsgBox (0, "Replace err", "HardDisks"& $vdi_path[0] &".vdi"& " match "& @extended &" times")
+								EndIf
+							EndIf
+						EndIf
+					Next
+
+					For $hdd_src In $hdd_srcs
+						$vdi_path2 = _StringBetween ($hdd_src, 'Machines', '.vdi')
+						If @error Then
+							ContinueLoop
+						Else
+							$xml_temp = StringReplace ($new_vbox_xml, $hdd_src, "Machines"& $vdi_path2[0] &".vdi")
+							If @error Then
+								ContinueLoop
+							Else
+								If @extended = 1 Then
+									$new_vbox_xml = $xml_temp
+								Else
+									MsgBox (0, "Replace err", "Machines"& $vdi_path2[0] &".vdi"& " match "& @extended &" times")
+								EndIf
+							EndIf
+						EndIf
+					Next
+
+				EndIf
+			EndIf
+
+			$dvds = _StringBetween ($vbox_xml, '<DVDImages>', '</DVDImages>')
+			If @error Then
+				$dvd_srcs = 0
+			Else
+				$dvd_srcs = _StringBetween ($dvds[0], '<Image', '/>')
+				If @error Then
+					$dvd_srcs = 0
+				Else
+
+					For $dvd_src In $dvd_srcs
+						$dvd_path = _StringBetween ($dvd_src, 'location="', '"')
+						If @error Then
+							ContinueLoop
+						Else
+							If NOT FileExists ($dvd_path[0]) Then
+								$xml_temp = StringReplace ($new_vbox_xml, '<Image'& $dvd_src &'/>', '')
+								If @error Then
+									ContinueLoop
+								Else
+									If @extended = 1 Then
+										$new_vbox_xml = $xml_temp
+									Else
+										MsgBox (0, "Replace err", '<Image'& $dvd_src &'/>'& " match "& @extended &" times")
+									EndIf
+								EndIf
+							EndIf
+						EndIf
+					Next
+		
+				EndIf
+			EndIf
+
+			$xml_global = _StringBetween ($vbox_xml, '<Global>', '</Global>')
+			If @error Then
+				$systemprops = 0
+			Else
+				$systemprops = _StringBetween ($xml_global[0], '<SystemProperties', '/>')
+				If @error Then
+					$systemprops = 0
+				Else
+
+					For $systemprop In $systemprops
+						$default_path = _StringBetween ($systemprop, 'defaultMachineFolder="', '"')
+						If @error Then
+							ContinueLoop
+						Else
+							If NOT FileExists ($default_path[0]) Then
+								$xml_temp = StringReplace ($new_vbox_xml, $default_path[0], StringReplace ($userDir, "\", "/") &"/Machines")
+								If @error Then
+									ContinueLoop
+								Else
+									If @extended = 1 Then
+										$new_vbox_xml = $xml_temp
+									Else
+										MsgBox (0, "Replace err", 'defaultMachineFolder="'& $default_path[0] &'"'& " match "& @extended &" times")
+									EndIf
+								EndIf
+							EndIf
+						EndIf
+					Next
+		
+				EndIf
+			EndIf
+
+			If $vbox_xml <> $new_vbox_xml Then
+				FileMove ($userDir &"\VirtualBox.xml", $userDir &"\VirtualBox.old.xml", 1)
+				$file = FileOpen ($userDir &"\VirtualBox.xml", 2)
+				If $file <> -1 Then
+					FileWrite ($file, $new_vbox_xml)
+					FileClose ($file)
+				EndIf
+			EndIf
 		EndIf
 	Else
 		MsgBox (0, IniRead ($langINI, "download", "15", "NotFound"), IniRead ($langINI, "download", "16", "NotFound"))
