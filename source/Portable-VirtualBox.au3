@@ -12,6 +12,22 @@
 #AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_Compile_both=Y
 
+;#pragma compile(Out, Portable-VirtualBox.exe)
+; Uncomment to use the following icon. Make sure the file path is correct and matches the installation of your AutoIt install path.
+#pragma compile(Icon, VirtualBox.ico)
+#pragma compile(ExecLevel, requireAdministrator)
+#pragma compile(UPX, False)
+#pragma compile(Compatibility, win10)
+#pragma compile(x64, false)
+#pragma compile(Comments, 'Portable-VirtualBox is a free and open source software tool that lets you run any operating system from a usb stick without separate installation.')
+;#pragma compile(CompanyName, '')
+#pragma compile(FileDescription, VirtualBox Portable FOSS)
+#pragma compile(FileVersion, 6.4.9.0, 1.0) ; The last parameter is optional.
+#pragma compile(LegalCopyright, 'Michael Meyer and more')
+;#pragma compile(LegalTrademarks, '"Trademark something, and some text in "quotes" etc...')
+#pragma compile(ProductName, Portable-VirtualBox)
+#pragma compile(ProductVersion, 6.4.9.0, 6.4.9.0-202401023)
+
 #include <ColorConstants.au3>
 #include <Constants.au3>
 #include <GUIConstantsEx.au3>

@@ -151,7 +151,9 @@ echo reshack path: %reshack%
 echo signtool path: %signtool%
 
 rem Remove any old files in the build directory.
-rmdir /s /q %build_folder%\Portable-VirtualBox
+if exist "%build_folder%\Portable-VirtualBox" (
+	rmdir /s /q %build_folder%\Portable-VirtualBox
+)
 
 rem Create build and release folders if needed.
 if not exist "%build_folder%\Portable-VirtualBox" md "%build_folder%\Portable-VirtualBox"
@@ -164,7 +166,7 @@ xcopy "%input_folder%LiesMich.txt" "%build_folder%\Portable-VirtualBox\"
 xcopy "%input_folder%ReadMe.txt"  "%build_folder%\Portable-VirtualBox\"
 
 rem Compile Portable-VirtualBox.
-"%aut2exe%" /in "%build_folder%\Portable-VirtualBox\source\Portable-VirtualBox.au3" /out "%build_folder%\Portable-VirtualBox\Portable-VirtualBox.exe" /icon "%build_folder%\Portable-VirtualBox\source\VirtualBox.ico" /x86
+"%aut2exe%" /in "%build_folder%\Portable-VirtualBox\source\Portable-VirtualBox.au3" /out "%build_folder%\Portable-VirtualBox\Portable-VirtualBox.exe" /x86
 if not exist "%build_folder%\Portable-VirtualBox\Portable-VirtualBox.exe" (
 	echo Failed to build exe. No .exe file was produced
 	EXIT /B
