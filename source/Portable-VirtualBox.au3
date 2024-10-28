@@ -26,7 +26,7 @@
 #pragma compile(LegalCopyright, 'Michael Meyer and more')
 ;#pragma compile(LegalTrademarks, '"Trademark something, and some text in "quotes" etc...')
 #pragma compile(ProductName, Portable-VirtualBox)
-#pragma compile(ProductVersion, 6.4.9.0, 6.4.9.0-202401023)
+#pragma compile(ProductVersion, 6.4.9.0, !github_sha!)
 
 #include <ColorConstants.au3>
 #include <Constants.au3>

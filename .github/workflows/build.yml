@@ -1,0 +1,56 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "v6.1" branch
+  push:
+    branches: [ "v6.1" ]
+  pull_request:
+    branches: [ "v6.1" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: windows-2019
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v4
+
+    - name: Cache AutoIt
+      id: cache-AutoIt
+      uses: actions/cache@v4
+      with:
+        path: "C:/Program Files (x86)/AutoIt3/"
+        key: ${{ runner.os }}-autoit_v3.3.16.1
+
+    # Runs a single command using the runners shell
+    - name: Install AutoIt
+      if: steps.cache-AutoIt.outputs.cache-hit != 'true'
+      run: |
+        Invoke-WebRequest -Uri https://www.autoitscript.com/cgi-bin/getfile.pl?autoit3/autoit-v3-setup.exe -OutFile autoit-v3-setup.exe
+        ./autoit-v3-setup.exe /S
+
+    # Runs a single command using the runners shell
+    - name: replace github_sha
+      run: sed -i -e '/^#pragma /s/!github_sha!/${{ github.sha }}/' source/Portable-VirtualBox.au3
+      shell: bash
+
+    # Runs a single command using the runners shell
+    - name: build.bat
+      run: build.bat
+      shell: cmd
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Portable-virtualbox_build_${{ github.sha }}
+        path: build/source/Portable-VirtualBox/**
