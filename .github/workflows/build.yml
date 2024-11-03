@@ -49,8 +49,25 @@ jobs:
       run: build.bat
       shell: cmd
 
+    # Runs a single command using the runners shell
+    - name: zip
+      run: |
+        cd build/source/Portable-VirtualBox
+        7z a -tzip ../../../Portable-VirtualBox.zip *
+      shell: cmd
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: Portable-virtualbox_build_${{ github.sha }}
         path: build/source/Portable-VirtualBox/**
+
+    - name: Deploy Windows release
+      uses: WebFreak001/deploy-nightly@v3.1.0
+      with:
+        upload_url: https://uploads.github.com/repos/bitamind/Portable-VirtualBox/releases/182074918/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 182074918 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: ./Portable-VirtualBox.zip # path to archive to upload
+        asset_name: Portable-VirtualBox_$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        #max_releases: 7 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
