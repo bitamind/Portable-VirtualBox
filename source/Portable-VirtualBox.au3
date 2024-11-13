@@ -708,6 +708,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				TrayTip("", IniRead ($langINI, "tray", "07", "NotFound"), 5)
 			EndIf
 
+			EnvSet ("VBOX_USER_HOME", $userDir)
 			Local $msvcrt = 0
 			If NOT FileExists (@SystemDir &"\msvcp100.dll") OR NOT FileExists (@SystemDir &"\msvcr100.dll") Then
 				FileCopy ($vboxDir & "\msvcp100.dll", @SystemDir, 9)
@@ -724,19 +725,19 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 			Local $DRV = 0
 			If FileExists ($vboxDir & "\drivers\VBoxDrv") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxDRV", "DisplayName") <> "VirtualBox Service" Then
-				RunWait ("cmd /c sc create VBoxDRV binpath= """& $vboxDir &"\drivers\vboxdrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", $pwd, @SW_HIDE)
+				RunWait ("sc create VBoxDRV binpath= """& $vboxDir &"\drivers\vboxdrv\VBoxDrv.sys"" type= kernel start= auto error= normal displayname= PortableVBoxDRV", $pwd, @SW_HIDE)
 				$DRV = 1
 			EndIf
 
 			Local $SUP = 0
 			If FileExists ($vboxDir & "\drivers\vboxsup") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSUP", "DisplayName") <> "VirtualBox Service" Then
-				RunWait ("cmd /c sc create VBoxSUP binpath= """& $vboxDir &"\drivers\VBoxSup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", $pwd, @SW_HIDE)
+				RunWait ("sc create VBoxSUP binpath= """& $vboxDir &"\drivers\VBoxSup\VBoxSup.sys"" type= kernel start= auto error= normal displayname= PortableVBoxSUP", $pwd, @SW_HIDE)
 				$SUP = 1
 			EndIf
 
 			Local $SDS = 0
 			If FileExists ($vboxDir & "\VBoxSDS.exe") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
-				RunWait ("cmd /c sc create VBoxSDS binpath= """& $vboxDir &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", $pwd, @SW_HIDE)
+				RunWait ("sc create VBoxSDS binpath= """& $vboxDir &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", $pwd, @SW_HIDE)
 				$SDS = 1
 			EndIf
 
@@ -751,7 +752,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 
 			Local $MON = 0
 			If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSBMon", "DisplayName") <> "VirtualBox USB Monitor Driver" Then
-				RunWait ("cmd /c sc create VBoxUSBMon binpath= """& $vboxDir &"\drivers\USB\filter\VBoxUSBMon.sys"" type= kernel start= auto error= normal displayname= PortableVBoxUSBMon", $pwd, @SW_HIDE)
+				RunWait ("sc create VBoxUSBMon binpath= """& $vboxDir &"\drivers\USB\filter\VBoxUSBMon.sys"" type= kernel start= auto error= normal displayname= PortableVBoxUSBMon", $pwd, @SW_HIDE)
 				$MON = 1
 			EndIf
 
@@ -821,56 +822,40 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			DllCall ($arch &"\VBoxRT.dll", "hwnd", "RTR3Init")
 
 			SplashOff ()
-
-			If $CmdLine[0] = 1 Then
-				If FileExists ($userDir) Then
-					Local $StartVM  = $CmdLine[1]
-					If IniRead ($cfgINI, "userhome", "key", "NotFound") = "data\.VirtualBox" AND FileExists ($userDir &"\HardDisks\"& $StartVM &".vdi") Then
-						RunWait ("cmd /c set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VBoxManage.exe startvm """& $StartVM &"""" , $pwd, @SW_HIDE)
-					Else
-						RunWait ("cmd /c set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VirtualBox.exe", $pwd, @SW_HIDE)
-					EndIf
+ 
+			Local $StartVM
+			If FileExists ($userDir) Then
+				If $CmdLine[0] = 1 Then
+					$StartVM = $CmdLine[1]
 				Else
-					RunWait ("cmd /c set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VirtualBox.exe", $pwd, @SW_HIDE)
+					$StartVM = IniRead ($cfgINI, "startvm", "key", "NotFound")
 				EndIf
-
-				ProcessWaitClose ("VirtualBox.exe")
-				ProcessWaitClose ("VBoxManage.exe")
+				If $StartVM <> "" And RunWait ($arch &'\VBoxManage.exe showvminfo "'& $StartVM &'"' , $pwd, @SW_HIDE) = 0 Then
+					RunWait ($arch &'\VBoxManage.exe startvm "'& $StartVM &'"' , $pwd, @SW_HIDE)
+				Else
+					RunWait ($arch &'\VirtualBox.exe', $pwd)
+				EndIf
 			Else
-				If FileExists ($userDir) Then
-					Local $StartVM  = IniRead ($cfgINI, "startvm", "key", "NotFound")
-					If IniRead ($cfgINI, "startvm", "key", "NotFound") = true Then
-						RunWait ("cmd /C set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VBoxManage.exe startvm """& $StartVM &"""" , $pwd, @SW_HIDE)
-					Else
-						RunWait ("cmd /c set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VirtualBox.exe", $pwd, @SW_HIDE)
-					EndIf
-				Else
-					RunWait ("cmd /c set VBOX_USER_HOME="& $userDir &"& .\"& $arch &"\VirtualBox.exe", $pwd, @SW_HIDE)
-				EndIf
-
-				ProcessWaitClose ("VirtualBox.exe")
-				ProcessWaitClose ("VBoxManage.exe")
+				RunWait ($arch &'\VirtualBox.exe', $pwd)
 			EndIf
 
+			ProcessWaitClose ("VirtualBox.exe")
+			ProcessWaitClose ("VBoxManage.exe")
 			ProcessWaitClose ("VirtualBoxVM.exe")
 
 			SplashTextOn ("Portable-VirtualBox", IniRead ($langINI, "messages", "07", "NotFound"), 220, 40, -1, -1, 1, "arial", 12)
 
-			ProcessWaitClose ("VBoxSVC.exe")
-			ProcessWaitClose ("VBoxSDS.exe")
-
-			EnvSet ("VBOX_USER_HOME")
 			Local $timer=0
-
-			Local $PID = ProcessExists ("VBoxSVC.exe")
-			If $PID Then ProcessClose ($PID)
-
-			While $timer < 10000 AND $PID
-				$PID = ProcessExists ("VBoxSVC.exe")
-				If $PID Then ProcessClose ($PID)
+			ProcessWaitClose ("VBoxSVC.exe", 10)
+			Do
+				If ProcessExists ("VBoxSVC.exe") Then
+					ProcessClose ("VBoxSVC.exe")
+				Else
+					ExitLoop
+				EndIf
 				Sleep(1000)
 				$timer += 1000
-			Wend
+			Until $timer > 10000
 
 			RunWait ($arch &"\VBoxSVC.exe /unregserver", $pwd, @SW_HIDE)
 			RunWait (@SystemDir &"\regsvr32.exe /S /U "& $arch &"\VBoxC.dll", $pwd, @SW_HIDE)
@@ -908,7 +893,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				RunWait ("sc stop VBoxNetLwf", $pwd, @SW_HIDE)
 				If $NDIS = 6 Then
 					RunWait ($toolDir &"\snetcfg_"& @OSArch &".exe -v -u ""sun_VBoxNetFlt""", $pwd, @SW_HIDE)
-					RunWait (@SystemDir &"\regsvr32.exe /S /U "&@SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
+					RunWait (@SystemDir &"\regsvr32.exe /S /U "& @SystemDir &"\VBoxNetFltNobj.dll", $pwd, @SW_HIDE)
 					;RunWait ("sc delete VBoxNetFlt", $pwd, @SW_HIDE)
 					FileDelete (@SystemDir &"\VBoxNetFltNobj.dll")
 					FileDelete (@SystemDir &"\drivers\VBoxNetFlt.sys")
@@ -960,8 +945,12 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				RunWait ("sc delete VBoxNetLwf", $pwd, @SW_HIDE)
 			EndIf
 
-			ProcessClose ("VBoxSDS.exe")
-			RunWait ("sc delete VBoxSDS", $pwd, @SW_HIDE)
+			If ProcessExists ("VBoxSDS.exe") Then
+				MsgBox (0, "sc delete", "VBoxSDS still alive")
+				RunWait ("sc stop VBoxSDS", $pwd, @SW_HIDE)
+				ProcessWaitClose ("VBoxSDS.exe")
+				RunWait ("sc delete VBoxSDS", $pwd, @SW_HIDE)
+			EndIf
 			SplashOff ()
 		Else
 			WinSetState ("Oracle VM VirtualBox Manager", "", BitAND (@SW_SHOW, @SW_RESTORE))
