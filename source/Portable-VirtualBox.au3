@@ -735,12 +735,6 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				$SUP = 1
 			EndIf
 
-			Local $SDS = 0
-			If FileExists ($vboxDir & "\VBoxSDS.exe") AND RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxSDS", "DisplayName") <> "VirtualBox system service" Then
-				RunWait ("sc create VBoxSDS binpath= """& $vboxDir &"\VBoxSDS.exe"" type= own start= auto error= normal displayname= PortableVBoxSDS", $pwd, @SW_HIDE)
-				$SDS = 1
-			EndIf
-
 			Local $USB = 0
 			If IniRead ($cfgINI, "usb", "key", "NotFound") = 1 Then
 				If RegRead ("HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VBoxUSB", "DisplayName") <> "VirtualBox USB" Then
@@ -796,8 +790,8 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				RunWait ("sc start VBoxSUP", $pwd, @SW_HIDE)
 			EndIf
 
-			If $SDS = 1 Then
-				RunWait ("sc start VBoxSDS", $pwd, @SW_HIDE)
+			If FileExists ($vboxDir & "\VBoxSDS.exe") AND RunWait ("sc query VBoxSDS" , $pwd, @SW_HIDE) <> 0 Then
+				RunWait ($arch &"\VBoxSDS.exe /reregservice", $pwd, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -846,7 +840,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			SplashTextOn ("Portable-VirtualBox", IniRead ($langINI, "messages", "07", "NotFound"), 220, 40, -1, -1, 1, "arial", 12)
 
 			Local $timer=0
-			ProcessWaitClose ("VBoxSVC.exe", 10)
+			ProcessWaitClose ("VBoxSVC.exe", 3)
 			Do
 				If ProcessExists ("VBoxSVC.exe") Then
 					ProcessClose ("VBoxSVC.exe")
@@ -868,7 +862,7 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				RunWait ("sc stop VBoxSUP", $pwd, @SW_HIDE)
 			EndIf
 
-			If $SDS = 1 Then
+			If ProcessExists ("VBoxSDS.exe") Then
 				RunWait ("sc stop VBoxSDS", $pwd, @SW_HIDE)
 			EndIf
 
@@ -924,8 +918,9 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 				RunWait ("sc delete VBoxSUP", $pwd, @SW_HIDE)
 			EndIf
 
-			If $SDS = 1 Then
-				RunWait ("sc delete VBoxSDS", $pwd, @SW_HIDE)
+			If FileExists ($vboxDir & "\VBoxSDS.exe") AND RunWait ("sc query VBoxSDS" , $pwd, @SW_HIDE) = 0 Then
+				ProcessWaitClose ("VBoxSDS.exe", 3)
+				RunWait ($arch &"\VBoxSDS.exe /unregservice", $pwd, @SW_HIDE)
 			EndIf
 
 			If $USB = 1 Then
@@ -948,8 +943,8 @@ If FileExists ($vboxDir &"\virtualbox.exe") AND ($startvbox = 1 OR IniRead ($upd
 			If ProcessExists ("VBoxSDS.exe") Then
 				MsgBox (0, "sc delete", "VBoxSDS still alive")
 				RunWait ("sc stop VBoxSDS", $pwd, @SW_HIDE)
-				ProcessWaitClose ("VBoxSDS.exe")
-				RunWait ("sc delete VBoxSDS", $pwd, @SW_HIDE)
+				ProcessWaitClose ("VBoxSDS.exe", 3)
+				RunWait ($arch &"\VBoxSDS.exe /unregservice", $pwd, @SW_HIDE)
 			EndIf
 			SplashOff ()
 		Else
